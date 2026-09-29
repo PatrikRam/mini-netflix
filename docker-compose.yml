@@ -1,0 +1,27 @@
+services:
+  catalogo:
+    build: ./catalogo
+    ports:
+      - "5001:5000"
+
+  # recomendaciones:
+  #   build: ./recomendaciones
+  #   ports:
+  #     - "5002:5000"
+
+  # rankings:
+  #   build: ./rankings
+  #   ports:
+  #     - "5003:5000"
+
+  # calificaciones:
+  #   build: ./calificaciones
+  #   ports:
+  #     - "5004:5000"
+
+  # frontend:
+  #   image: nginx:alpine
+  #   volumes:
+  #     - ./frontend:/usr/share/nginx/html
+  #   ports:
+  #     - "8080:80"
