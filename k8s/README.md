@@ -1,0 +1,1 @@
+﻿Configuraciones k8s
