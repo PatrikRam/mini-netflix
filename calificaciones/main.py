@@ -8,13 +8,16 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-# Si esta variable esta vacia, no se valida la pelicula contra el catalogo.
-# En Kubernetes se define como http://catalogo:5001
+from database import crear_tabla, obtener_conexion
+
 CATALOGO_URL = os.getenv("CATALOGO_URL", "")
 
 app = FastAPI(title="Calificaciones - Mini Netflix")
 
-CALIFICACIONES = []  # lista en memoria: {"pelicula_id", "puntaje", "reseña"}
+
+@app.on_event("startup")
+def iniciar_base_datos():
+    crear_tabla()
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -37,57 +40,127 @@ def verificar_pelicula(pelicula_id: int):
     if not CATALOGO_URL:
         return
     try:
-        r = httpx.get(f"{CATALOGO_URL}/peliculas/{pelicula_id}", timeout=3)
+        respuesta = httpx.get(
+            f"{CATALOGO_URL}/peliculas/{pelicula_id}",
+            timeout=3,
+        )
     except httpx.RequestError:
-        raise HTTPException(status_code=503, detail="Catalogo no disponible")
-    if r.status_code == 404:
-        raise HTTPException(status_code=404, detail="No se encontro la pelicula")
+        raise HTTPException(
+            status_code=503,
+            detail="Catalogo no disponible",
+        )
 
-
-def calcular_promedio(puntajes):
-    return round(sum(puntajes) / len(puntajes), 2) if puntajes else 0.0
-
+    if respuesta.status_code == 404:
+        raise HTTPException(
+            status_code=404,
+            detail="No se encontro la pelicula",
+        )
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
-
 @app.post("/calificaciones", status_code=201)
 def crear_calificacion(datos: NuevaCalificacion):
     verificar_pelicula(datos.pelicula_id)
-    nueva = {
-        "pelicula_id": datos.pelicula_id,
-        "puntaje": datos.puntaje,
-        "reseña": datos.reseña,
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO calificaciones (pelicula_id, puntaje, resena)
+                VALUES (%s, %s, %s)
+                RETURNING pelicula_id, puntaje, resena;
+                """,
+                (
+                    datos.pelicula_id,
+                    datos.puntaje,
+                    datos.reseña,
+                ),
+            )
+
+            nueva = cursor.fetchone()
+        conexion.commit()
+
+    finally:
+        conexion.close()
+
+    return {
+        "pelicula_id": nueva["pelicula_id"],
+        "puntaje": nueva["puntaje"],
+        "reseña": nueva["resena"],
     }
-    CALIFICACIONES.append(nueva)
-    return nueva
 
 
 # IMPORTANTE: esta ruta va antes que /calificaciones/{pelicula_id}
 @app.get("/calificaciones/promedios")
 def promedios():
-    ids = sorted({c["pelicula_id"] for c in CALIFICACIONES})
+    conexion = obtener_conexion()
+
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    pelicula_id,
+                    ROUND(AVG(puntaje)::numeric, 2) AS promedio
+                FROM calificaciones
+                GROUP BY pelicula_id
+                ORDER BY pelicula_id;
+                """
+            )
+
+            resultados = cursor.fetchall()
+
+    finally:
+        conexion.close()
+
     return [
         {
-            "pelicula_id": i,
-            "promedio": calcular_promedio(
-                [c["puntaje"] for c in CALIFICACIONES if c["pelicula_id"] == i]
-            ),
+            "pelicula_id": fila["pelicula_id"],
+            "promedio": float(fila["promedio"]),
         }
-        for i in ids
+        for fila in resultados
     ]
 
 
 @app.get("/calificaciones/{pelicula_id}")
 def calificaciones_de_pelicula(pelicula_id: int):
-    propias = [c for c in CALIFICACIONES if c["pelicula_id"] == pelicula_id]
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT puntaje, resena
+                FROM calificaciones
+                WHERE pelicula_id = %s
+                ORDER BY id;
+                """,
+                (pelicula_id,),
+            )
+            calificaciones = cursor.fetchall()
+
+    finally:
+        conexion.close()
+
+    if calificaciones:
+        promedio = round(
+            sum(c["puntaje"] for c in calificaciones)
+            / len(calificaciones),
+            2,
+        )
+    else:
+        promedio = 0.0
+
     return {
         "pelicula_id": pelicula_id,
-        "promedio": calcular_promedio([c["puntaje"] for c in propias]),
-        "total": len(propias),
+        "promedio": promedio,
+        "total": len(calificaciones),
         "reseñas": [
-            {"puntaje": c["puntaje"], "reseña": c["reseña"]} for c in propias
+            {
+                "puntaje": c["puntaje"],
+                "reseña": c["resena"],
+            }
+            for c in calificaciones
         ],
     }
