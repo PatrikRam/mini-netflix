@@ -25,10 +25,16 @@ services:
   #   ports:
   #     - "5002:5000"
 
-  # rankings:
-  #   build: ./rankings
-  #   ports:
-  #     - "5003:5000"
+  rankings:
+    build: ./rankings
+    ports:
+      - "5003:5000"
+    environment:
+      - CATALOGO_URL=http://catalogo:5000
+      - CALIFICACIONES_URL=http://calificaciones:5000
+      - USAR_CALIFICACIONES_PRUEBA=true
+    depends_on:
+      - catalogo
 
   # calificaciones:
   #   build: ./calificaciones
