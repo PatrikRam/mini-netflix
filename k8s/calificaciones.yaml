@@ -2,9 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: calificaciones
-  namespace: mini-netflix
 spec:
-  replicas: 1   # 1 replica porque los datos viven en memoria
+  replicas: 3
   selector:
     matchLabels:
       app: calificaciones
@@ -13,33 +12,69 @@ spec:
       labels:
         app: calificaciones
     spec:
+
+      initContainers:
+        - name: esperar-postgres
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              value: calificaciones
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready \
+                -h calificaciones-db \
+                -U calificaciones \
+                -d calificaciones;
+              do
+                echo "Esperando PostgreSQL..."
+                sleep 2
+              done
+
       containers:
         - name: calificaciones
           image: mini-netflix/calificaciones:1.0
           imagePullPolicy: IfNotPresent
+
           ports:
             - containerPort: 5000
+
           env:
             - name: CATALOGO_URL
-              value: "http://catalogo:5001"
+              value: "http://catalogo:5000"
+
+            - name: POSTGRES_HOST
+              value: "calificaciones-db"
+
+            - name: POSTGRES_USER
+              value: "calificaciones"
+
+            - name: POSTGRES_PASSWORD
+              value: "calificaciones"
+
+            - name: POSTGRES_DB
+              value: "calificaciones"
+
           readinessProbe:
             httpGet:
               path: /health
               port: 5000
             initialDelaySeconds: 3
             periodSeconds: 5
+
           livenessProbe:
             httpGet:
               path: /health
               port: 5000
             initialDelaySeconds: 10
             periodSeconds: 10
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: calificaciones
-  namespace: mini-netflix
 spec:
   selector:
     app: calificaciones

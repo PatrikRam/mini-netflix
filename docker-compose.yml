@@ -7,6 +7,27 @@ services:
       POSTGRES_DB: catalogo
     ports:
       - "5432:5432"
+    volumes:
+      - catalogo_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalogo -d catalogo"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-calificaciones:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: calificaciones
+      POSTGRES_PASSWORD: calificaciones
+      POSTGRES_DB: calificaciones
+    volumes:
+      - calificaciones_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calificaciones -d calificaciones"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   catalogo:
     build: ./catalogo
@@ -20,7 +41,8 @@ services:
     volumes:
       - ./docs:/app/docs:ro
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   # recomendaciones:
   #   build: ./recomendaciones
@@ -34,9 +56,10 @@ services:
     environment:
       - CATALOGO_URL=http://catalogo:5000
       - CALIFICACIONES_URL=http://calificaciones:5000
-      - USAR_CALIFICACIONES_PRUEBA=true
+      - USAR_CALIFICACIONES_PRUEBA=false
     depends_on:
       - catalogo
+      - calificaciones
 
   calificaciones:
     build: ./calificaciones
@@ -44,6 +67,15 @@ services:
       - "5004:5000"
     environment:
       - CATALOGO_URL=http://catalogo:5000
+      - POSTGRES_HOST=db-calificaciones
+      - POSTGRES_USER=calificaciones
+      - POSTGRES_PASSWORD=calificaciones
+      - POSTGRES_DB=calificaciones
+    depends_on:
+      catalogo:
+        condition: service_started
+      db-calificaciones:
+        condition: service_healthy
 
   frontend:
     build: ./frontend
@@ -51,3 +83,7 @@ services:
       - "8080:80"
     depends_on:
       - catalogo
+
+volumes:
+  catalogo_data:
+  calificaciones_data:
