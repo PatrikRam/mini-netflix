@@ -1,0 +1,8 @@
+[
+  {"id":1,"titulo":"Matrix","genero":"accion","anio":1999},
+  {"id":2,"titulo":"Toy Story","genero":"animacion","anio":1995},
+  {"id":3,"titulo":"El Padrino","genero":"drama","anio":1972},
+  {"id":4,"titulo":"Interstellar","genero":"ciencia ficcion","anio":2014},
+  {"id":5,"titulo":"Coco","genero":"animacion","anio":2017},
+  {"id":6,"titulo":"Mad Max","genero":"accion","anio":2015}
+]

@@ -1,8 +1,26 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: catalogo
+      POSTGRES_PASSWORD: catalogo
+      POSTGRES_DB: catalogo
+    ports:
+      - "5432:5432"
+
   catalogo:
     build: ./catalogo
     ports:
       - "5001:5000"
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: catalogo
+      POSTGRES_PASSWORD: catalogo
+      POSTGRES_DB: catalogo
+    volumes:
+      - ./docs:/app/docs:ro
+    depends_on:
+      - db
 
   # recomendaciones:
   #   build: ./recomendaciones
