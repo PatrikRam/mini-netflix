@@ -38,16 +38,16 @@ services:
     depends_on:
       - catalogo
 
-  # calificaciones:
-  #   build: ./calificaciones
-  #   ports:
-  #     - "5004:5000"
+  calificaciones:
+    build: ./calificaciones
+    ports:
+      - "5004:5000"
+    environment:
+      - CATALOGO_URL=http://catalogo:5000
 
   frontend:
     build: ./frontend
     ports:
       - "8080:80"
-    environment:
-      CALIFICACIONES_URL: http://calificaciones:5004
     depends_on:
       - catalogo

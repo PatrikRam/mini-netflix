@@ -44,7 +44,7 @@ async function cargar() {
       lista = await get(`${API.cat}/peliculas${ps.toString() ? '?' + ps : ''}`);
     }
     // filtro extra en el navegador por si el servicio ignora algún parámetro
-    lista = lista.filter(p => (!g || (p.genero || '').toLowerCase() === g) && (!q || p.titulo.toLowerCase().includes(q)));
+    lista = lista.filter(p => (!g || (p.genero || '').toLowerCase() === g.toLowerCase()) && (!q || p.titulo.toLowerCase().includes(q)));
     $('#grid').replaceChildren(...lista.map(card));
     $('#msg').textContent = lista.length ? '' : 'Sin resultados.';
   } catch (e) {
@@ -103,7 +103,7 @@ async function init() {
   try {
     const todas = await get(`${API.cat}/peliculas`);
     [...new Set(todas.map(p => p.genero).filter(Boolean))].sort()
-      .forEach(x => $('#genero').append(h('option', { value: x.toLowerCase() }, x)));
+      .forEach(x => $('#genero').append(h('option', { value: x }, x)));
   } catch (e) {}
   await cargarPromedios();
   cargar();

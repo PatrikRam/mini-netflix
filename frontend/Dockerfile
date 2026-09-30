@@ -1,12 +1,3 @@
-# Bloque para agregar (descomentado) en docker-compose.yml, reemplazando el frontend comentado:
-#   frontend:
-#     build: ./frontend
-#     ports:
-#       - "8080:80"
-#     environment:
-#       CALIFICACIONES_URL: http://calificaciones:5004   # puerto real del servicio
-#     depends_on:
-#       - catalogo
 FROM nginx:alpine
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
     CATALOGO_URL=http://catalogo:5000 \

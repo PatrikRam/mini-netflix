@@ -18,20 +18,20 @@ spec:
           image: mini-netflix/calificaciones:1.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 5004
+            - containerPort: 5000
           env:
             - name: CATALOGO_URL
               value: "http://catalogo:5001"
           readinessProbe:
             httpGet:
               path: /health
-              port: 5004
+              port: 5000
             initialDelaySeconds: 3
             periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
-              port: 5004
+              port: 5000
             initialDelaySeconds: 10
             periodSeconds: 10
 ---
@@ -44,5 +44,5 @@ spec:
   selector:
     app: calificaciones
   ports:
-    - port: 5004
-      targetPort: 5004
+    - port: 5000
+      targetPort: 5000
