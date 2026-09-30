@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rankings
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rankings
+  template:
+    metadata:
+      labels:
+        app: rankings
+    spec:
+      containers:
+        - name: rankings
+          image: mini-netflix/rankings:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: CATALOGO_URL
+              value: "http://catalogo:5000"
+
+            - name: CALIFICACIONES_URL
+              value: "http://calificaciones:5000"
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rankings
+spec:
+  selector:
+    app: rankings
+  ports:
+    - port: 5000
+      targetPort: 5000
