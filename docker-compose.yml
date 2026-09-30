@@ -25,9 +25,11 @@ services:
   #   ports:
   #     - "5004:5000"
 
-  # frontend:
-  #   image: nginx:alpine
-  #   volumes:
-  #     - ./frontend:/usr/share/nginx/html
-  #   ports:
-  #     - "8080:80"
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    environment:
+      CALIFICACIONES_URL: http://calificaciones:5004
+    depends_on:
+      - catalogo
