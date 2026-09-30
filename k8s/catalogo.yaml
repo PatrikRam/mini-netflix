@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalogo
+  template:
+    metadata:
+      labels:
+        app: catalogo
+    spec:
+      containers:
+        - name: catalogo
+          image: catalogo:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5000
+          env:
+            - name: POSTGRES_HOST
+              value: catalogo-db
+            - name: POSTGRES_USER
+              value: catalogo
+            - name: POSTGRES_PASSWORD
+              value: catalogo
+            - name: POSTGRES_DB
+              value: catalogo
+          volumeMounts:
+            - name: dataset
+              mountPath: /app/docs
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: dataset
+          configMap:
+            name: peliculas-dataset
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogo
+spec:
+  selector:
+    app: catalogo
+  ports:
+    - port: 5000
+      targetPort: 5000

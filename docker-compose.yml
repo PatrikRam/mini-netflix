@@ -17,6 +17,8 @@ services:
       POSTGRES_USER: catalogo
       POSTGRES_PASSWORD: catalogo
       POSTGRES_DB: catalogo
+    volumes:
+      - ./docs:/app/docs:ro
     depends_on:
       - db
 
