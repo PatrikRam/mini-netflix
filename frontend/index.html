@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mini Netflix</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>MINI-NETFLIX</h1>
+  <nav><button data-tab="catalogo" class="on">Catálogo</button><button data-tab="top">Top 10</button></nav>
+</header>
+<section class="filtros">
+  <input id="q" type="search" placeholder="Buscar película...">
+  <select id="genero"><option value="">Todos los géneros</option></select>
+</section>
+<main><div id="grid" class="grid"></div><p id="msg"></p></main>
+<dialog id="modal"></dialog>
+<script src="app.js"></script>
+</body>
+</html>

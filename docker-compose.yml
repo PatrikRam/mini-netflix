@@ -55,7 +55,7 @@ services:
       - "5003:5000"
     environment:
       - CATALOGO_URL=http://catalogo:5000
-      - CALIFICACIONES_URL=http://calificaciones:5004
+      - CALIFICACIONES_URL=http://calificaciones:5000
       - USAR_CALIFICACIONES_PRUEBA=false
     depends_on:
       - catalogo
@@ -64,7 +64,7 @@ services:
   calificaciones:
     build: ./calificaciones
     ports:
-      - "5004:5004"
+      - "5004:5000"
     environment:
       - CATALOGO_URL=http://catalogo:5000
       - POSTGRES_HOST=db-calificaciones
@@ -78,11 +78,11 @@ services:
         condition: service_healthy
 
   frontend:
-    image: nginx:alpine
-    volumes:
-      - ./frontend:/usr/share/nginx/html
+    build: ./frontend
     ports:
       - "8080:80"
+    depends_on:
+      - catalogo
 
 volumes:
   catalogo_data:
