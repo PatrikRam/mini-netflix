@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: calificaciones-db-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calificaciones-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: calificaciones-db
+  template:
+    metadata:
+      labels:
+        app: calificaciones-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: calificaciones
+            - name: POSTGRES_PASSWORD
+              value: calificaciones
+            - name: POSTGRES_DB
+              value: calificaciones
+          volumeMounts:
+            - name: calificaciones-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U calificaciones -d calificaciones
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U calificaciones -d calificaciones
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: calificaciones-data
+          persistentVolumeClaim:
+            claimName: calificaciones-db-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calificaciones-db
+spec:
+  selector:
+    app: calificaciones-db
+  ports:
+    - port: 5432
+      targetPort: 5432
