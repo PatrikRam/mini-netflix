@@ -56,10 +56,22 @@ services:
     environment:
       - CATALOGO_URL=http://catalogo:5000
       - CALIFICACIONES_URL=http://calificaciones:5000
-      - USAR_CALIFICACIONES_PRUEBA=false
     depends_on:
       - catalogo
       - calificaciones
+
+  calificaciones-init:
+    build: ./calificaciones
+    command: python seed.py
+    environment:
+      - POSTGRES_HOST=db-calificaciones
+      - POSTGRES_USER=calificaciones
+      - POSTGRES_PASSWORD=calificaciones
+      - POSTGRES_DB=calificaciones
+    depends_on:
+      db-calificaciones:
+        condition: service_healthy
+    restart: "no"
 
   calificaciones:
     build: ./calificaciones
@@ -74,8 +86,8 @@ services:
     depends_on:
       catalogo:
         condition: service_started
-      db-calificaciones:
-        condition: service_healthy
+      calificaciones-init:
+        condition: service_completed_successfully
 
   frontend:
     build: ./frontend

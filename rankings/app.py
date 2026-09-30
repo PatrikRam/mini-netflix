@@ -1,4 +1,3 @@
-
 import os
 import requests
 
@@ -20,21 +19,6 @@ CALIFICACIONES_URL = os.getenv(
     "CALIFICACIONES_URL",
     "http://calificaciones:5000"
 )
-
-
-# TEMPORAL: cambiar a False cuando se integre el servicio de Patrick.
-USAR_CALIFICACIONES_PRUEBA = os.getenv(
-    "USAR_CALIFICACIONES_PRUEBA",
-    "true"
-).lower() == "true"
-
-
-# TEMPORAL: eliminar cuando se utilicen las calificaciones reales.
-CALIFICACIONES_PRUEBA = [
-    {"pelicula_id": 1, "promedio": 4.8},
-    {"pelicula_id": 2, "promedio": 4.5},
-    {"pelicula_id": 3, "promedio": 4.9}
-]
 
 
 @app.get("/health")
@@ -62,10 +46,7 @@ def obtener_peliculas():
 
 
 def obtener_promedios():
-    """Obtiene los promedios de prueba o los del servicio real."""
-
-    if USAR_CALIFICACIONES_PRUEBA:
-        return CALIFICACIONES_PRUEBA
+    """Consulta los promedios del microservicio de calificaciones."""
 
     try:
         respuesta = requests.get(
@@ -89,7 +70,6 @@ def construir_ranking():
     peliculas = obtener_peliculas()
     promedios = obtener_promedios()
 
-    # Crear un diccionario para buscar promedios por ID.
     promedios_por_id = {
         calificacion["pelicula_id"]: calificacion["promedio"]
         for calificacion in promedios
@@ -100,7 +80,6 @@ def construir_ranking():
     for pelicula in peliculas:
         pelicula_id = pelicula["id"]
 
-        # Incluir solamente películas que tengan un promedio.
         if pelicula_id in promedios_por_id:
             pelicula_con_promedio = {
                 **pelicula,
