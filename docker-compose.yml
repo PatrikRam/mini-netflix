@@ -45,9 +45,16 @@ services:
         condition: service_healthy
 
   # recomendaciones:
-  #   build: ./recomendaciones
-  #   ports:
-  #     - "5002:5000"
+  recomendaciones:
+    build: ./recomendaciones
+    ports:
+      - "5002:5000"
+    environment:
+      - CATALOGO_URL=http://catalogo:5000
+      - CALIFICACIONES_URL=http://calificaciones:5000
+    depends_on:
+      - catalogo
+      - calificaciones
 
   rankings:
     build: ./rankings
