@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" role="img" aria-labelledby="title">
+  <title id="title">Ilustración de póster de película</title>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#54121b"/>
+      <stop offset="0.55" stop-color="#171923"/>
+      <stop offset="1" stop-color="#050608"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#f5c518" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#e50914" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="900" fill="url(#background)"/>
+  <circle cx="390" cy="350" r="290" fill="url(#glow)"/>
+  <path d="M0 650 190 420l95 105 100-175 215 300v250H0Z" fill="#090a0e" opacity=".82"/>
+  <path d="m0 700 175-125 115 90 125-150 185 135v250H0Z" fill="#e50914" opacity=".24"/>
+  <circle cx="440" cy="210" r="5" fill="#fff" opacity=".8"/>
+  <circle cx="135" cy="275" r="3" fill="#fff" opacity=".7"/>
+  <circle cx="510" cy="490" r="4" fill="#fff" opacity=".75"/>
+  <circle cx="225" cy="180" r="2" fill="#fff" opacity=".65"/>
+  <text x="48" y="795" fill="#f5c518" font-family="Arial, sans-serif" font-size="20" letter-spacing="8">MINI CINEMA</text>
+  <path d="M48 820h160" stroke="#e50914" stroke-width="5"/>
+</svg>

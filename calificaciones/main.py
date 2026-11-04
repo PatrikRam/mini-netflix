@@ -12,7 +12,7 @@ from database import crear_tabla, obtener_conexion
 
 CATALOGO_URL = os.getenv("CATALOGO_URL", "")
 
-app = FastAPI(title="Calificaciones - Mini Netflix")
+app = FastAPI(title="Calificaciones - Mini Netflix") 
 
 
 @app.on_event("startup")

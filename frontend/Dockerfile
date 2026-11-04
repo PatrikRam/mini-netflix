@@ -6,3 +6,4 @@ ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
     RECOMENDACIONES_URL=http://recomendaciones:5000
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY index.html app.js styles.css /usr/share/nginx/html/
+COPY images/ /usr/share/nginx/html/images/

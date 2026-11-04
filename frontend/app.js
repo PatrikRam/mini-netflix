@@ -17,14 +17,43 @@ async function get(url) {
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
-// El campo de imagen del catálogo puede llamarse distinto: se prueban varios nombres
-const poster = p => p.imagen || p.imagen_url || p.poster_url || p.poster || p.url_imagen || p.image || '';
 const meta = p => [p.genero, p.anio].filter(Boolean).join(' · ');
 
+function posterImage(p) {
+  const sources = [
+    `/images/posters/${encodeURIComponent(p.id)}.jpg`,
+    p.imagen_local,
+    p.imagen,
+    p.imagen_url,
+    p.poster_url,
+    p.poster,
+    p.url_imagen,
+    p.image,
+    '/images/poster-placeholder.svg',
+  ].filter(Boolean);
+  const image = h('img', {
+    alt: `Póster de ${p.titulo}`,
+    loading: 'lazy',
+  });
+
+  image.addEventListener('error', () => {
+    const nextSource = Number(image.dataset.sourceIndex || 0) + 1;
+    if (nextSource >= sources.length) {
+      image.remove();
+      return;
+    }
+    image.dataset.sourceIndex = nextSource;
+    image.src = sources[nextSource];
+  });
+
+  image.src = sources[0];
+  return image;
+}
+
 function card(p) {
-  const img = poster(p), prom = p.promedio ?? promedios[p.id];
+  const prom = p.promedio ?? promedios[p.id];
   return h('article', { class: 'card', onclick: () => abrir(p) },
-    img ? h('img', { src: img, alt: p.titulo, loading: 'lazy', onerror: e => e.target.remove() }) : '',
+    posterImage(p),
     h('div', { class: 'info' }, h('strong', {}, p.titulo), h('span', {}, meta(p)),
       prom != null ? h('span', { class: 'star' }, `★ ${Number(prom).toFixed(1)}`) : ''));
 }
