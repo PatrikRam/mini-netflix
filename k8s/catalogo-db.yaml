@@ -19,7 +19,10 @@ spec:
             - name: POSTGRES_USER
               value: catalogo
             - name: POSTGRES_PASSWORD
-              value: catalogo
+              valueFrom:
+                secretKeyRef:
+                  name: catalogo-secrets
+                  key: db-password
             - name: POSTGRES_DB
               value: catalogo
           ports:

@@ -24,9 +24,17 @@ spec:
             - name: POSTGRES_USER
               value: catalogo
             - name: POSTGRES_PASSWORD
-              value: catalogo
+              valueFrom:
+                secretKeyRef:
+                  name: catalogo-secrets
+                  key: db-password
             - name: POSTGRES_DB
               value: catalogo
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: catalogo-secrets
+                  key: django-secret-key
           volumeMounts:
             - name: dataset
               mountPath: /app/docs

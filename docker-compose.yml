@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: catalogo
-      POSTGRES_PASSWORD: catalogo
+      POSTGRES_PASSWORD: ${CATALOGO_DB_PASSWORD:?define CATALOGO_DB_PASSWORD en .env}
       POSTGRES_DB: catalogo
     ports:
       - "5432:5432"
@@ -19,7 +19,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: calificaciones
-      POSTGRES_PASSWORD: calificaciones
+      POSTGRES_PASSWORD: ${CALIFICACIONES_DB_PASSWORD:?define CALIFICACIONES_DB_PASSWORD en .env}
       POSTGRES_DB: calificaciones
     volumes:
       - calificaciones_data:/var/lib/postgresql/data
@@ -36,15 +36,15 @@ services:
     environment:
       POSTGRES_HOST: db
       POSTGRES_USER: catalogo
-      POSTGRES_PASSWORD: catalogo
+      POSTGRES_PASSWORD: ${CATALOGO_DB_PASSWORD:?define CATALOGO_DB_PASSWORD en .env}
       POSTGRES_DB: catalogo
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?define DJANGO_SECRET_KEY en .env}
     volumes:
       - ./docs:/app/docs:ro
     depends_on:
       db:
         condition: service_healthy
 
-  # recomendaciones:
   recomendaciones:
     build: ./recomendaciones
     ports:
@@ -73,7 +73,7 @@ services:
     environment:
       - POSTGRES_HOST=db-calificaciones
       - POSTGRES_USER=calificaciones
-      - POSTGRES_PASSWORD=calificaciones
+      - POSTGRES_PASSWORD=${CALIFICACIONES_DB_PASSWORD:?define CALIFICACIONES_DB_PASSWORD en .env}
       - POSTGRES_DB=calificaciones
     depends_on:
       db-calificaciones:
@@ -88,7 +88,7 @@ services:
       - CATALOGO_URL=http://catalogo:5000
       - POSTGRES_HOST=db-calificaciones
       - POSTGRES_USER=calificaciones
-      - POSTGRES_PASSWORD=calificaciones
+      - POSTGRES_PASSWORD=${CALIFICACIONES_DB_PASSWORD:?define CALIFICACIONES_DB_PASSWORD en .env}
       - POSTGRES_DB=calificaciones
     depends_on:
       catalogo:

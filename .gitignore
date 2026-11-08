@@ -2,3 +2,11 @@ __pycache__/
 *.pyc
 .env
 venv/
+# Secretos y estado de Terraform
+.env
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+tfplan

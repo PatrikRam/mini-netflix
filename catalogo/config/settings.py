@@ -4,12 +4,14 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Para el proyecto académico basta un valor fijo — en producción real iría por variable de entorno.
-SECRET_KEY = "django-insecure-clave-solo-para-el-curso-cambiar-si-hace-falta"
+# Leer desde variables de entorno (falla si no existe, lo cual es seguro)
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
-DEBUG = True  # True simplifica todo para la demo: no necesitas preocuparte de ALLOWED_HOSTS estricto
+# Apagado por defecto por seguridad en producción
+DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = ["*"]  # Acepta cualquier host — correcto para un proyecto de curso en contenedores
+# "*": los probes de K8s llegan por IP de pod
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -57,7 +59,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("POSTGRES_DB", "catalogo"),
         "USER": os.environ.get("POSTGRES_USER", "catalogo"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "catalogo"),
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],  # Sin valor por defecto por seguridad
         "HOST": os.environ.get("POSTGRES_HOST", "db"),
         "PORT": "5432",
     }

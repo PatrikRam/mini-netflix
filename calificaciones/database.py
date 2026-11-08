@@ -1,14 +1,14 @@
 import os
-
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
-
+# Se mantienen los valores por defecto para host, db y user (no son secretos)
 DB_HOST = os.getenv("POSTGRES_HOST", "db")
 DB_NAME = os.getenv("POSTGRES_DB", "calificaciones")
 DB_USER = os.getenv("POSTGRES_USER", "calificaciones")
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "calificaciones")
 
+# Cambio obligatorio: se usa os.environ para que exija la variable sí o sí
+DB_PASSWORD = os.environ["POSTGRES_PASSWORD"]
 
 def obtener_conexion():
     return psycopg2.connect(
@@ -18,7 +18,6 @@ def obtener_conexion():
         password=DB_PASSWORD,
         cursor_factory=RealDictCursor,
     )
-
 
 def crear_tabla():
     conexion = obtener_conexion()

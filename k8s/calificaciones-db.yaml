@@ -35,7 +35,10 @@ spec:
             - name: POSTGRES_USER
               value: calificaciones
             - name: POSTGRES_PASSWORD
-              value: calificaciones
+              valueFrom:
+                secretKeyRef:
+                  name: calificaciones-secrets
+                  key: db-password
             - name: POSTGRES_DB
               value: calificaciones
           volumeMounts:
