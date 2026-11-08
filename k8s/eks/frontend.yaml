@@ -1,0 +1,56 @@
+# Variables que sustituye envsubst: ECR_REGISTRY, IMAGE_TAG
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels: { app: frontend }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: frontend }
+  template:
+    metadata:
+      labels: { app: frontend }
+    spec:
+      containers:
+        - name: frontend
+          image: ${ECR_REGISTRY}/mini-netflix/frontend:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          # nginx (con `resolver` + variables) NO usa los dominios de búsqueda de Kubernetes,
+          # por eso un nombre corto como "catalogo" falla ("could not be resolved").
+          # Se usa el nombre completo <servicio>.<namespace>.svc.cluster.local.
+          # El namespace se lee del propio pod, así no queda fijo en el archivo.
+          # POD_NAMESPACE debe ir ANTES de las URLs que lo usan.
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef: { fieldPath: metadata.namespace }
+            - { name: CATALOGO_URL, value: "http://catalogo.$(POD_NAMESPACE).svc.cluster.local:5000" }
+            - { name: CALIFICACIONES_URL, value: "http://calificaciones.$(POD_NAMESPACE).svc.cluster.local:5000" }
+            - { name: RANKINGS_URL, value: "http://rankings.$(POD_NAMESPACE).svc.cluster.local:5000" }
+            - { name: RECOMENDACIONES_URL, value: "http://recomendaciones.$(POD_NAMESPACE).svc.cluster.local:5000" }
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+          # nginx no tiene /health: se comprueba que sirva el index.html
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+# Único punto de entrada público: EKS crea un balanceador en AWS.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  type: LoadBalancer
+  selector: { app: frontend }
+  ports:
+    - { port: 80, targetPort: 80 }
