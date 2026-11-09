@@ -7,6 +7,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy_k8s:
+        description: "Autorizar despliegue a Kubernetes"
+        type: boolean
+        required: true
+        default: false
 
 jobs:
   test:
@@ -146,3 +152,86 @@ jobs:
           docker push "$IMAGE"
 
           echo "Imagen publicada: $IMAGE"
+
+
+  validate-k8s:
+    name: Validar manifiestos Kubernetes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar herramientas de validacion
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base
+          python -m pip install PyYAML
+
+      - name: Validar manifiestos Kubernetes
+        run: bash scripts/validate-k8s.sh
+
+
+  deploy-k8s:
+    name: CD - Desplegar Kubernetes
+    runs-on: ubuntu-latest
+    needs: [build-and-push, validate-k8s]
+
+    # No desplegar salvo autorización manual desde main.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.deploy_k8s == true
+
+    concurrency:
+      group: mini-netflix-deployment
+      cancel-in-progress: false
+
+    env:
+      AWS_REGION: us-east-1
+      NAMESPACE: mini-netflix
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configurar acceso a Kubernetes
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          if [ -z "$KUBECONFIG_B64" ]; then
+            echo "ERROR: Falta configurar KUBECONFIG_B64"
+            exit 1
+          fi
+
+          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          printf '%s' "$KUBECONFIG_B64" | base64 --decode > "$KUBECONFIG"
+          chmod 600 "$KUBECONFIG"
+
+          echo "KUBECONFIG=$KUBECONFIG" >> "$GITHUB_ENV"
+
+      - name: Verificar acceso al cluster
+        run: |
+          kubectl get namespace "$NAMESPACE"
+
+      - name: Actualizar Deployments
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          export ECR_REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+
+          bash scripts/deploy-k8s.sh
