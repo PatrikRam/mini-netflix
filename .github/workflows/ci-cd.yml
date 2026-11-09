@@ -1,0 +1,148 @@
+
+name: Mini-Netflix CI/CD
+
+on:
+  push:
+    branches: [main, feature/rankings]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests - ${{ matrix.servicio }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio: [catalogo, rankings]
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: catalogo
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: catalogo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U catalogo -d catalogo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DJANGO_SECRET_KEY: clave-temporal-solo-ci
+      POSTGRES_HOST: localhost
+      POSTGRES_USER: catalogo
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: catalogo
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ${{ matrix.servicio }}/requirements-dev.txt
+
+      - name: Instalar dependencias
+        working-directory: ${{ matrix.servicio }}
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Ejecutar pytest
+        working-directory: ${{ matrix.servicio }}
+        run: python -m pytest -v
+
+  e2e:
+    name: E2E - Docker Compose
+    runs-on: ubuntu-latest
+    needs: test
+
+    env:
+      CATALOGO_DB_PASSWORD: password-ci-catalogo
+      CALIFICACIONES_DB_PASSWORD: password-ci-calificaciones
+      DJANGO_SECRET_KEY: clave-temporal-e2e-github-actions
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Construir e iniciar microservicios
+        run: |
+          docker compose up -d --build catalogo calificaciones rankings
+
+      - name: Preparar base de datos de Catalogo
+        run: |
+          docker compose exec -T catalogo python manage.py migrate
+          docker compose exec -T catalogo python manage.py seed
+
+      - name: Ejecutar pruebas E2E
+        run: bash scripts/e2e-compose.sh
+
+      - name: Mostrar logs si falla
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Detener contenedores
+        if: always()
+        run: docker compose down -v
+
+
+
+  build-and-push:
+    name: ECR - ${{ matrix.servicio }}
+    runs-on: ubuntu-latest
+    needs: e2e
+
+    # Solo se habilita mediante una ejecución manual desde main.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio:
+          - catalogo
+          - calificaciones
+          - rankings
+          - recomendaciones
+          - frontend
+
+    env:
+      AWS_REGION: us-east-1
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Iniciar sesion en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Construir y publicar imagen
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SERVICIO: ${{ matrix.servicio }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$ECR_REGISTRY/mini-netflix/$SERVICIO:$IMAGE_TAG"
+
+          docker build -t "$IMAGE" "./$SERVICIO"
+          docker push "$IMAGE"
+
+          echo "Imagen publicada: $IMAGE"
