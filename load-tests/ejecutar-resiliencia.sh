@@ -24,6 +24,7 @@ trap limpiar EXIT
 registrar_evento "INICIO DE PRUEBA"
 
 docker run --rm \
+    --user "$(id -u):$(id -g)" \
     --network host \
     -v "$PWD:/app" \
     -w /app \
