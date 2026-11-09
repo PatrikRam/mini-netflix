@@ -78,6 +78,29 @@ jobs:
       - name: Ejecutar prueba automatizada de resiliencia
         run: bash load-tests/ejecutar-resiliencia.sh
 
+
+      - name: Verificar archivos generados
+        if: always()
+        shell: bash
+        run: |
+          echo "Archivos de resultados:"
+          ls -lah load-tests/resultados/resiliencia/ || true
+
+          echo "Verificando JSON:"
+          if [ -f load-tests/resultados/resiliencia/resiliencia-final.json ]; then
+            echo "JSON encontrado"
+          else
+            echo "JSON no encontrado"
+          fi
+
+          echo "Verificando LOG:"
+          if [ -f load-tests/resultados/resiliencia/resiliencia-final.log ]; then
+            echo "LOG encontrado"
+            tail -n 40 load-tests/resultados/resiliencia/resiliencia-final.log
+          else
+            echo "LOG no encontrado"
+          fi
+
       - name: Validar resultados de resiliencia
         if: always()
         run: python3 load-tests/validar-resiliencia.py
