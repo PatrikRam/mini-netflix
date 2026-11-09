@@ -6,6 +6,7 @@ on:
     branches: [main, feature/rankings]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -93,3 +94,55 @@ jobs:
       - name: Detener contenedores
         if: always()
         run: docker compose down -v
+
+
+
+  build-and-push:
+    name: ECR - ${{ matrix.servicio }}
+    runs-on: ubuntu-latest
+    needs: e2e
+
+    # Solo se habilita mediante una ejecución manual desde main.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        servicio:
+          - catalogo
+          - calificaciones
+          - rankings
+          - recomendaciones
+          - frontend
+
+    env:
+      AWS_REGION: us-east-1
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Iniciar sesion en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Construir y publicar imagen
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SERVICIO: ${{ matrix.servicio }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$ECR_REGISTRY/mini-netflix/$SERVICIO:$IMAGE_TAG"
+
+          docker build -t "$IMAGE" "./$SERVICIO"
+          docker push "$IMAGE"
+
+          echo "Imagen publicada: $IMAGE"
