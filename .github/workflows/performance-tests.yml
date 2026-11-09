@@ -90,7 +90,7 @@ jobs:
       - name: Ejecutar pruebas de rendimiento
         shell: bash
         env:
-          PRUEBA: ${{ github.event.inputs.prueba || 'smoke' }}
+          PRUEBA: ${{ github.event.inputs.prueba || 'todas' }}
         run: |
           set -e
 
