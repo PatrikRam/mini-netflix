@@ -1,7 +1,22 @@
+# Entornos virtuales
 venv/
 .venv/
+
+# Archivos temporales de Python
 __pycache__/
 *.pyc
-.git
+.pytest_cache/
+
+# Pruebas y reportes
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Git y variables sensibles
+.git/
 .env
+.env.*
+
+# Archivos locales
 db.sqlite3
