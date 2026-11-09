@@ -1,0 +1,164 @@
+{
+    "metrics": {
+        "checks": {
+            "fails": 0,
+            "passes": 7490,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "http_req_duration": {
+            "med": 13.54053,
+            "max": 263.346075,
+            "p(90)": 34.6398184,
+            "p(95)": 44.03368694999998,
+            "avg": 19.034703898397836,
+            "min": 1.003736,
+            "thresholds": {
+                "p(95)<1000": false
+            }
+        },
+        "http_req_sending": {
+            "max": 3.876602,
+            "p(90)": 0.04463800000000001,
+            "p(95)": 0.05230644999999993,
+            "avg": 0.02855633030707601,
+            "min": 0.006374,
+            "med": 0.02111
+        },
+        "http_req_connecting": {
+            "med": 0,
+            "max": 38.073222,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.03709584753004004,
+            "min": 0
+        },
+        "http_req_waiting": {
+            "med": 12.9751115,
+            "max": 263.124236,
+            "p(90)": 34.3499586,
+            "p(95)": 43.611493949999996,
+            "avg": 18.733972186915874,
+            "min": 0.937453
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 7490,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0
+        },
+        "http_req_blocked": {
+            "p(95)": 0.011520499999999993,
+            "avg": 0.0501247096128173,
+            "min": 0.002175,
+            "med": 0.0059825,
+            "max": 40.091062,
+            "p(90)": 0.00949
+        },
+        "vus_max": {
+            "max": 20,
+            "value": 20,
+            "min": 20
+        },
+        "data_sent": {
+            "count": 690578,
+            "rate": 4582.42205115418
+        },
+        "http_req_receiving": {
+            "avg": 0.2721753811749004,
+            "min": 0.019873,
+            "med": 0.12218799999999999,
+            "max": 38.894664,
+            "p(90)": 0.3798567000000003,
+            "p(95)": 0.9572327999999994
+        },
+        "iteration_duration": {
+            "p(90)": 1128.1642353,
+            "p(95)": 1171.8700605499998,
+            "avg": 1097.126052554741,
+            "min": 1066.315032,
+            "med": 1083.313729,
+            "max": 1463.634055
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 1.003736,
+            "med": 13.54053,
+            "max": 263.346075,
+            "p(90)": 34.6398184,
+            "p(95)": 44.03368694999998,
+            "avg": 19.034703898397836
+        },
+        "data_received": {
+            "count": 7254814,
+            "rate": 48140.28198208177
+        },
+        "vus": {
+            "value": 1,
+            "min": 1,
+            "max": 20
+        },
+        "http_reqs": {
+            "rate": 49.700889925750324,
+            "count": 7490
+        },
+        "iterations": {
+            "count": 1498,
+            "rate": 9.940177985150065
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "catalogo responde 200": {
+                    "name": "catalogo responde 200",
+                    "path": "::catalogo responde 200",
+                    "id": "9035e810067dc5e361e96e45543f0d6a",
+                    "passes": 1498,
+                    "fails": 0
+                },
+                "recomendaciones responde 200": {
+                    "path": "::recomendaciones responde 200",
+                    "id": "02b7e9ef0a010156db06dd6390c544e4",
+                    "passes": 1498,
+                    "fails": 0,
+                    "name": "recomendaciones responde 200"
+                },
+                "rankings responde 200": {
+                    "passes": 1498,
+                    "fails": 0,
+                    "name": "rankings responde 200",
+                    "path": "::rankings responde 200",
+                    "id": "a17b27c3d285b9b21b12e33d970c2388"
+                },
+                "calificaciones responde 200": {
+                    "name": "calificaciones responde 200",
+                    "path": "::calificaciones responde 200",
+                    "id": "9267f8be7bb9085f1c8823e881b55ec7",
+                    "passes": 1498,
+                    "fails": 0
+                },
+                "frontend responde 200": {
+                    "name": "frontend responde 200",
+                    "path": "::frontend responde 200",
+                    "id": "7ade4d1474dcb61d90f5089dd61c591d",
+                    "passes": 1498,
+                    "fails": 0
+                }
+            }
+    }
+}

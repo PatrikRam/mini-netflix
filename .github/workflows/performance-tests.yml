@@ -1,0 +1,142 @@
+
+name: Mini Netflix - Performance Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      prueba:
+        description: "Selecciona la prueba de rendimiento"
+        required: true
+        default: "smoke"
+        type: choice
+        options:
+          - smoke
+          - carga
+          - estres
+          - pico
+          - todas
+
+jobs:
+  performance:
+    name: Ejecutar pruebas k6
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    env:
+      CATALOGO_DB_PASSWORD: test-catalogo-ci
+      CALIFICACIONES_DB_PASSWORD: test-calificaciones-ci
+      DJANGO_SECRET_KEY: clave-temporal-exclusiva-ci
+
+      CATALOGO_URL: http://localhost:5001
+      RECOMENDACIONES_URL: http://localhost:5002
+      RANKINGS_URL: http://localhost:5003
+      CALIFICACIONES_URL: http://localhost:5004
+      FRONTEND_URL: http://localhost:8080
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar directorio de resultados
+        run: |
+          mkdir -p load-tests/resultados
+          rm -f load-tests/resultados/*.json
+
+      - name: Construir imágenes Docker
+        run: docker compose build
+
+      - name: Iniciar bases de datos
+        run: docker compose up -d --wait db db-calificaciones
+
+      - name: Ejecutar migraciones del catálogo
+        run: docker compose run --rm --no-deps catalogo python manage.py migrate --noinput
+
+      - name: Cargar películas iniciales
+        run: docker compose run --rm --no-deps catalogo python manage.py seed
+
+      - name: Iniciar microservicios
+        run: docker compose up -d
+
+      - name: Esperar a que los servicios estén disponibles
+        shell: bash
+        run: |
+          for intento in $(seq 1 60); do
+            if curl --fail --silent http://localhost:5001/peliculas > /dev/null &&
+               curl --fail --silent http://localhost:5002/recomendaciones/1 > /dev/null &&
+               curl --fail --silent http://localhost:5003/rankings/top10 > /dev/null &&
+               curl --fail --silent http://localhost:5004/calificaciones/1 > /dev/null &&
+               curl --fail --silent http://localhost:8080/ > /dev/null; then
+
+              echo "Los cinco servicios están preparados."
+              exit 0
+            fi
+
+            echo "Esperando servicios... intento $intento"
+            sleep 5
+          done
+
+          echo "ERROR: uno o más servicios no respondieron."
+          docker compose ps
+          docker compose logs --tail=50
+          exit 1
+
+      - name: Preparar imagen de k6
+        run: docker pull grafana/k6:2.3.0
+
+      - name: Ejecutar pruebas de rendimiento
+        shell: bash
+        env:
+          PRUEBA: ${{ github.event.inputs.prueba || 'smoke' }}
+        run: |
+          set -e
+
+          ejecutar_prueba() {
+            nombre="$1"
+            echo "Ejecutando prueba: $nombre"
+
+            docker run --rm \
+              --network host \
+              -v "$PWD:/app" \
+              -w /app \
+              -e CATALOGO_URL="$CATALOGO_URL" \
+              -e RECOMENDACIONES_URL="$RECOMENDACIONES_URL" \
+              -e RANKINGS_URL="$RANKINGS_URL" \
+              -e CALIFICACIONES_URL="$CALIFICACIONES_URL" \
+              -e FRONTEND_URL="$FRONTEND_URL" \
+              grafana/k6:2.3.0 run \
+              --summary-export="load-tests/resultados/${nombre}.json" \
+              "load-tests/${nombre}.js"
+          }
+
+          if [ "$PRUEBA" = "todas" ]; then
+            ejecutar_prueba smoke
+            ejecutar_prueba carga
+            ejecutar_prueba estres
+            ejecutar_prueba pico
+          else
+            ejecutar_prueba "$PRUEBA"
+          fi
+
+      - name: Publicar reportes k6
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-k6
+          path: load-tests/resultados/*.json
+          if-no-files-found: warn
+
+      - name: Mostrar estado de contenedores
+        if: always()
+        run: docker compose ps
+
+      - name: Mostrar logs si falla el workflow
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Limpiar entorno temporal
+        if: always()
+        run: docker compose down -v

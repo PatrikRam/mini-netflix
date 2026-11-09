@@ -1,0 +1,150 @@
+{
+    "metrics": {
+        "vus": {
+            "min": 1,
+            "max": 10,
+            "value": 1
+        },
+        "http_reqs": {
+            "count": 3648,
+            "rate": 20.26269694823653
+        },
+        "http_req_blocked": {
+            "min": 0.002484,
+            "med": 0.005507,
+            "max": 5.724359,
+            "p(90)": 0.007990100000000002,
+            "p(95)": 0.009554649999999984,
+            "avg": 0.02344904961622813
+        },
+        "iterations": {
+            "count": 1216,
+            "rate": 6.754232316078844
+        },
+        "iteration_duration": {
+            "max": 1218.249779,
+            "p(90)": 1043.7801975000002,
+            "p(95)": 1047.049188,
+            "avg": 1039.4918497253288,
+            "min": 1033.087444,
+            "med": 1037.7764109999998
+        },
+        "http_req_duration": {
+            "avg": 12.760466070997765,
+            "min": 0.956945,
+            "med": 11.027052000000001,
+            "max": 191.009622,
+            "p(90)": 25.6854372,
+            "p(95)": 27.565899799999997,
+            "thresholds": {
+                "p(95)<1000": false
+            }
+        },
+        "http_req_connecting": {
+            "med": 0,
+            "max": 3.208817,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.015516324835526318,
+            "min": 0
+        },
+        "http_req_receiving": {
+            "med": 0.1051765,
+            "max": 11.267449,
+            "p(90)": 0.17850680000000002,
+            "p(95)": 0.3331173499999992,
+            "avg": 0.15331039747806985,
+            "min": 0.029647
+        },
+        "vus_max": {
+            "min": 10,
+            "max": 10,
+            "value": 10
+        },
+        "http_req_duration{expected_response:true}": {
+            "min": 0.956945,
+            "med": 11.027052000000001,
+            "max": 191.009622,
+            "p(90)": 25.6854372,
+            "p(95)": 27.565899799999997,
+            "avg": 12.760466070997765
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 3648,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_waiting": {
+            "med": 10.7676305,
+            "max": 190.850292,
+            "p(90)": 25.5426731,
+            "p(95)": 27.436770149999997,
+            "avg": 12.58117536650218,
+            "min": 0.884914
+        },
+        "data_received": {
+            "count": 4951552,
+            "rate": 27503.23399107305
+        },
+        "http_req_tls_handshaking": {
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0
+        },
+        "checks": {
+            "passes": 3648,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "http_req_sending": {
+            "avg": 0.025980307017543846,
+            "min": 0.007064,
+            "med": 0.023986,
+            "max": 0.316121,
+            "p(90)": 0.041573000000000006,
+            "p(95)": 0.0465072
+        },
+        "data_sent": {
+            "count": 323456,
+            "rate": 1796.6257960769724
+        }
+    },
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "catalogo responde 200": {
+                    "path": "::catalogo responde 200",
+                    "id": "9035e810067dc5e361e96e45543f0d6a",
+                    "passes": 1216,
+                    "fails": 0,
+                    "name": "catalogo responde 200"
+                },
+                "rankings responde 200": {
+                    "path": "::rankings responde 200",
+                    "id": "a17b27c3d285b9b21b12e33d970c2388",
+                    "passes": 1216,
+                    "fails": 0,
+                    "name": "rankings responde 200"
+                },
+                "frontend responde 200": {
+                    "passes": 1216,
+                    "fails": 0,
+                    "name": "frontend responde 200",
+                    "path": "::frontend responde 200",
+                    "id": "7ade4d1474dcb61d90f5089dd61c591d"
+                }
+            }
+    }
+}
