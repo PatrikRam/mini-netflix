@@ -52,7 +52,9 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: ${{ matrix.servicio }}
-        run: python -m pip install -r requirements-dev.txt
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
 
       - name: Ejecutar pytest
         working-directory: ${{ matrix.servicio }}
