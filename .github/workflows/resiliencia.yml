@@ -10,51 +10,75 @@ on:
 
 jobs:
   resiliencia:
+    name: Ejecutar prueba de resiliencia
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
+    env:
+      CATALOGO_DB_PASSWORD: test-catalogo-ci
+      CALIFICACIONES_DB_PASSWORD: test-calificaciones-ci
+      DJANGO_SECRET_KEY: clave-temporal-exclusiva-ci
+
+      CATALOGO_URL: http://localhost:5001
+      RECOMENDACIONES_URL: http://localhost:5002
+      RANKINGS_URL: http://localhost:5003
+      CALIFICACIONES_URL: http://localhost:5004
+      FRONTEND_URL: http://localhost:8080
 
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
+      - name: Preparar directorio de resultados
+        run: |
+          mkdir -p load-tests/resultados/resiliencia
+          rm -f load-tests/resultados/resiliencia/*
+
+      - name: Construir imagenes Docker
+        run: docker compose build
+
+      - name: Iniciar bases de datos
+        run: docker compose up -d --wait db db-calificaciones
+
+      - name: Ejecutar migraciones del catalogo
+        run: docker compose run --rm --no-deps catalogo python manage.py migrate --noinput
+
+      - name: Cargar peliculas iniciales
+        run: docker compose run --rm --no-deps catalogo python manage.py seed
+
       - name: Iniciar microservicios
-        run: docker compose up -d --build
+        run: docker compose up -d
 
       - name: Esperar disponibilidad de servicios
         shell: bash
         run: |
-          set -e
+          for intento in $(seq 1 60); do
+            if curl --fail --silent http://localhost:5001/peliculas > /dev/null &&
+               curl --fail --silent http://localhost:5002/recomendaciones/1 > /dev/null &&
+               curl --fail --silent http://localhost:5003/rankings/top10 > /dev/null &&
+               curl --fail --silent http://localhost:5004/calificaciones/1 > /dev/null &&
+               curl --fail --silent http://localhost:8080/ > /dev/null; then
 
-          for endpoint in \
-            "http://localhost:5001/peliculas" \
-            "http://localhost:5002/recomendaciones/1" \
-            "http://localhost:5003/rankings/top10" \
-            "http://localhost:5004/calificaciones/1" \
-            "http://localhost:8080/"
-          do
-            echo "Verificando: $endpoint"
-
-            disponible=false
-
-            for intento in $(seq 1 60); do
-              if curl -fsS --max-time 3 "$endpoint" > /dev/null; then
-                disponible=true
-                break
-              fi
-
-              sleep 2
-            done
-
-            if [ "$disponible" != "true" ]; then
-              echo "ERROR: Servicio no disponible: $endpoint"
-              exit 1
+              echo "Los cinco servicios estan preparados."
+              exit 0
             fi
+
+            echo "Esperando servicios... intento $intento"
+            sleep 5
           done
 
-      - name: Ejecutar prueba de resiliencia
+          echo "ERROR: uno o mas servicios no respondieron."
+          docker compose ps
+          docker compose logs --tail=50
+          exit 1
+
+      - name: Preparar imagen de k6
+        run: docker pull grafana/k6:2.3.0
+
+      - name: Ejecutar prueba automatizada de resiliencia
         run: bash load-tests/ejecutar-resiliencia.sh
 
-      - name: Validar resultados
+      - name: Validar resultados de resiliencia
         if: always()
         run: python3 load-tests/validar-resiliencia.py
 
@@ -65,7 +89,7 @@ jobs:
           docker compose logs --timestamps \
             > load-tests/resultados/resiliencia/docker-compose.log 2>&1
 
-      - name: Guardar resultados
+      - name: Publicar resultados de resiliencia
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -73,6 +97,14 @@ jobs:
           path: load-tests/resultados/resiliencia/
           if-no-files-found: warn
 
-      - name: Detener contenedores
+      - name: Mostrar estado de contenedores
         if: always()
-        run: docker compose down
+        run: docker compose ps
+
+      - name: Mostrar logs si falla el workflow
+        if: failure()
+        run: docker compose logs --tail=100
+
+      - name: Limpiar entorno temporal
+        if: always()
+        run: docker compose down -v
