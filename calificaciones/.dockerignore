@@ -5,3 +5,4 @@ __pycache__/
 .git
 .env
 db.sqlite3
+README.md

@@ -1,0 +1,171 @@
+# Calificaciones + su PostgreSQL + Secret.
+# Variables que sustituye envsubst: ECR_REGISTRY, IMAGE_TAG, CALIFICACIONES_DB_PASSWORD
+# El namespace NO va aquí: se pasa con `kubectl apply -n <namespace>`.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: calificaciones-secrets
+type: Opaque
+stringData:
+  db-password: "${CALIFICACIONES_DB_PASSWORD}"
+---
+# ---------- PostgreSQL ----------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calificaciones-db
+  labels: { app: calificaciones-db }
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: calificaciones-db }
+  template:
+    metadata:
+      labels: { app: calificaciones-db }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - { name: POSTGRES_USER, value: calificaciones }
+            - { name: POSTGRES_DB, value: calificaciones }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: calificaciones-secrets, key: db-password }
+            # subcarpeta: evita el error "lost+found" si el volumen es un disco
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U calificaciones -d calificaciones"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U calificaciones -d calificaciones"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+      volumes:
+        # emptyDir: no requiere el driver EBS CSI (no disponible/confirmado en Learner Lab).
+        # Si el pod de la BD se reinicia, se pierden los datos y hay que re-ejecutar el Job de seed.
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calificaciones-db
+spec:
+  selector: { app: calificaciones-db }
+  ports:
+    - { port: 5432, targetPort: 5432 }
+---
+# ---------- Servicio calificaciones (FastAPI) ----------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calificaciones
+  labels: { app: calificaciones }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: calificaciones }
+  template:
+    metadata:
+      labels: { app: calificaciones }
+    spec:
+      initContainers:
+        - name: esperar-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h calificaciones-db -U calificaciones -d calificaciones; do
+                echo "Esperando PostgreSQL..."; sleep 2
+              done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
+      containers:
+        - name: calificaciones
+          image: ${ECR_REGISTRY}/mini-netflix/calificaciones:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - { name: CATALOGO_URL, value: "http://catalogo:5000" }
+            - { name: POSTGRES_HOST, value: calificaciones-db }
+            - { name: POSTGRES_USER, value: calificaciones }
+            - { name: POSTGRES_DB, value: calificaciones }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: calificaciones-secrets, key: db-password }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calificaciones
+spec:
+  selector: { app: calificaciones }
+  ports:
+    - { port: 5000, targetPort: 5000 }
+---
+# ---------- Datos de ejemplo (idempotente: seed.py no duplica si ya hay filas) ----------
+# Un Job no se puede modificar: antes de cada apply ejecutar
+#   kubectl delete job calificaciones-seed --ignore-not-found
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: calificaciones-seed
+spec:
+  backoffLimit: 4
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: esperar-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h calificaciones-db -U calificaciones -d calificaciones; do sleep 2; done
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
+      containers:
+        - name: seed
+          image: ${ECR_REGISTRY}/mini-netflix/calificaciones:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          command: ["python", "seed.py"]
+          env:
+            - { name: POSTGRES_HOST, value: calificaciones-db }
+            - { name: POSTGRES_USER, value: calificaciones }
+            - { name: POSTGRES_DB, value: calificaciones }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: calificaciones-secrets, key: db-password }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }
