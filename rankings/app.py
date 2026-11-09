@@ -2,12 +2,15 @@ import os
 import requests
 
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
     title="Mini Netflix - Rankings",
     description="Microservicio de rankings de películas",
     version="1.0.0"
 )
+
+Instrumentator().instrument(app).expose(app)
 
 # Direcciones de los otros microservicios
 CATALOGO_URL = os.getenv(

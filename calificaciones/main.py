@@ -3,6 +3,7 @@ from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -14,6 +15,8 @@ CATALOGO_URL = os.getenv("CATALOGO_URL", "")
 
 app = FastAPI(title="Calificaciones - Mini Netflix") 
 
+# Habilitar metricas para Prometheus
+Instrumentator().instrument(app).expose(app)
 
 @app.on_event("startup")
 def iniciar_base_datos():

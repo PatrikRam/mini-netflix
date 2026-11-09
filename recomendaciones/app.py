@@ -3,6 +3,7 @@ import math
 import requests
 
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 
 
 app = FastAPI(
@@ -10,6 +11,9 @@ app = FastAPI(
     description="Microservicio de recomendaciones de películas",
     version="1.0.0",
 )
+
+# Habilitar metricas de Prometheus
+Instrumentator().instrument(app).expose(app)
 
 
 CATALOGO_URL = os.getenv(
