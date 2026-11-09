@@ -235,3 +235,43 @@ jobs:
           export ECR_REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
           bash scripts/deploy-k8s.sh
+
+
+      - name: Smoke tests posteriores al despliegue
+        env:
+          FRONTEND_URL: http://127.0.0.1:18080
+          CATALOGO_URL: http://127.0.0.1:18080/api/catalogo
+          CALIFICACIONES_URL: http://127.0.0.1:18080/api/calificaciones
+          RANKINGS_URL: http://127.0.0.1:18080/api/rankings
+          RECOMENDACIONES_URL: http://127.0.0.1:18080/api/recomendaciones
+        run: |
+          kubectl -n "$NAMESPACE" port-forward \
+            svc/frontend 18080:80 \
+            > "$RUNNER_TEMP/frontend-port-forward.log" 2>&1 &
+
+          PF_PID=$!
+          trap 'kill "$PF_PID" 2>/dev/null || true' EXIT
+
+          for intento in {1..15}; do
+            if ! kill -0 "$PF_PID" 2>/dev/null; then
+              echo "ERROR: port-forward terminó inesperadamente"
+              cat "$RUNNER_TEMP/frontend-port-forward.log"
+              exit 1
+            fi
+
+            if curl --fail --silent \
+              --max-time 3 "$FRONTEND_URL/" \
+              --output /dev/null; then
+              break
+            fi
+
+            if [ "$intento" -eq 15 ]; then
+              echo "ERROR: Frontend no está disponible"
+              cat "$RUNNER_TEMP/frontend-port-forward.log"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          bash scripts/smoke.sh
