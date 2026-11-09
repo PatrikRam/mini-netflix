@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata: { name: catalogo-migrate, namespace: mini-netflix }
+spec:
+  backoffLimit: 4                  # reintenta si la DB aún no acepta conexiones
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: ${ECR_REGISTRY}/mini-netflix/catalogo:${IMAGE_TAG}
+          command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py seed"]
+          env:
+            - { name: POSTGRES_HOST, value: catalogo-db }
+            - { name: POSTGRES_USER, value: catalogo }
+            - { name: POSTGRES_DB,   value: catalogo }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: catalogo-secrets, key: db-password } }
+            - name: DJANGO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: catalogo-secrets, key: django-secret-key } }
+          volumeMounts: [{ name: dataset, mountPath: /app/docs }]
+      volumes:
+        - name: dataset
+          configMap: { name: peliculas-dataset }   # lo crea el pipeline desde docs/peliculas.json
