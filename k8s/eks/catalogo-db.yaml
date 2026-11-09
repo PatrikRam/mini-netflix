@@ -1,0 +1,36 @@
+# DB de demostración dentro del clúster. emptyDir: si el pod se recrea, los datos se pierden
+# (el Job de seed los vuelve a cargar). Para algo duradero: RDS o un volumen EBS.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: catalogo-db, namespace: mini-netflix }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: catalogo-db } }
+  template:
+    metadata: { labels: { app: catalogo-db } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports: [{ containerPort: 5432 }]
+          env:
+            - { name: POSTGRES_USER, value: catalogo }
+            - { name: POSTGRES_DB,   value: catalogo }
+            - { name: PGDATA,        value: /var/lib/postgresql/data/pgdata }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: catalogo-secrets, key: db-password } }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "catalogo", "-d", "catalogo"] }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+      volumes: [{ name: data, emptyDir: {} }]
+---
+apiVersion: v1
+kind: Service            # ClusterIP: la base NO se expone fuera del clúster
+metadata: { name: catalogo-db, namespace: mini-netflix }
+spec:
+  selector: { app: catalogo-db }
+  ports: [{ port: 5432 }]

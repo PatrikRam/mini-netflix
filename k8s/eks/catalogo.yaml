@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: catalogo, namespace: mini-netflix }
+spec:
+  # Sin "replicas": las controla el HPA. Si las fijaras aquí, cada deploy las reiniciaría.
+  selector: { matchLabels: { app: catalogo } }
+  template:
+    metadata: { labels: { app: catalogo } }
+    spec:
+      securityContext: { runAsNonRoot: true }
+      containers:
+        - name: catalogo
+          image: ${ECR_REGISTRY}/mini-netflix/catalogo:${IMAGE_TAG}
+          ports: [{ containerPort: 5000 }]
+          env:
+            - { name: POSTGRES_HOST, value: catalogo-db }
+            - { name: POSTGRES_USER, value: catalogo }
+            - { name: POSTGRES_DB,   value: catalogo }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: catalogo-secrets, key: db-password } }
+            - name: DJANGO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: catalogo-secrets, key: django-secret-key } }
+          readinessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /health, port: 5000 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          # El request es bajo a propósito: así la carga de k6 supera pronto el 50% y dispara el escalado.
+          resources:
+            requests: { cpu: 50m,  memory: 96Mi }
+            limits:   { cpu: 250m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: catalogo, namespace: mini-netflix }
+spec:
+  type: LoadBalancer           # crea un balanceador público de AWS (para k6 y curl)
+  selector: { app: catalogo }
+  ports: [{ port: 5000, targetPort: 5000 }]   # 5000 para que http://catalogo:5000 siga válido para rankings
