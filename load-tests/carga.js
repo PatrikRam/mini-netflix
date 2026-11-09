@@ -40,8 +40,16 @@ export default function () {
       url: `${CATALOGO_URL}/peliculas`,
     },
     {
+      nombre: 'recomendaciones',
+      url: `${RECOMENDACIONES_URL}/recomendaciones/1`,
+    },
+    {
       nombre: 'rankings',
       url: `${RANKINGS_URL}/rankings/top10`,
+    },
+    {
+      nombre: 'calificaciones',
+      url: `${CALIFICACIONES_URL}/calificaciones/1`,
     },
     {
       nombre: 'frontend',
