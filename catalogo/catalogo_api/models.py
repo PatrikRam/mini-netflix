@@ -8,6 +8,6 @@ class Pelicula(models.Model):
 
     class Meta:
         # Equivale al UNIQUE(titulo, anio) — evita duplicados al recargar el dataset
-        constraints = [
+        constraints = [  # noqa: RUF012 (atributo estándar de Django Meta)
             models.UniqueConstraint(fields=["titulo", "anio"], name="titulo_anio_unico")
         ]

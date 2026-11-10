@@ -1,6 +1,6 @@
 import os
-import requests
 
+import requests
 from fastapi import FastAPI, HTTPException
 
 app = FastAPI(
