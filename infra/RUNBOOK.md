@@ -87,6 +87,60 @@ done
 kubectl -n mini-netflix get pods,svc,hpa
 ```
 
+## Verificación de la infraestructura (evidencia para la demo)
+
+```bash
+R=us-east-2; C=mini-netflix-eks
+
+# 1. Terraform: todo lo que creó
+terraform -chdir=infra/terraform state list
+terraform -chdir=infra/terraform output
+
+# 2. Clúster EKS
+aws eks describe-cluster --name $C --region $R \
+  --query 'cluster.{Estado:status,Version:version,Auth:accessConfig.authenticationMode}' --output table
+
+# 3. Node group y add-ons
+aws eks describe-nodegroup --cluster-name $C --nodegroup-name mini-netflix-ng --region $R \
+  --query 'nodegroup.{Estado:status,AMI:amiType,Tipo:instanceTypes[0],Deseado:scalingConfig.desiredSize}' --output table
+aws eks list-addons --cluster-name $C --region $R
+
+# 4. Instancias EC2 detrás de los nodos (sin IP pública: viven en subredes privadas)
+aws ec2 describe-instances --region $R \
+  --filters Name=tag:eks:cluster-name,Values=$C Name=instance-state-name,Values=running \
+  --query 'Reservations[].Instances[].[InstanceId,InstanceType,Placement.AvailabilityZone,PrivateIpAddress]' --output table
+
+# 5. Nodo de Kubernetes = instancia EC2 (providerID)
+kubectl get nodes -o wide
+kubectl get nodes -o custom-columns=NODO:.metadata.name,EC2:.spec.providerID,ZONA:.metadata.labels.topology\\.kubernetes\\.io/zone
+
+# 6. Pods del sistema y métricas
+kubectl get pods -A
+kubectl top nodes
+
+# 7. Permisos (Access Entries)
+aws eks list-access-entries --cluster-name $C --region $R
+
+# 8. Imágenes en ECR
+aws ecr describe-images --region $R --repository-name mini-netflix/catalogo \
+  --query 'imageDetails[].[imageTags[0],imagePushedAt]' --output table
+```
+
+### Probar que EKS jala imágenes de ECR
+
+```bash
+REG=$(terraform -chdir=infra/terraform output -raw ecr_registry); TAG=<tag-existente>
+kubectl -n mini-netflix run ecr-pull-test --image=$REG/mini-netflix/catalogo:$TAG --restart=Never \
+  --command -- python -c "print('OK: imagen de ECR corriendo en EKS')"
+kubectl -n mini-netflix wait --for=jsonpath='{.status.phase}'=Succeeded pod/ecr-pull-test --timeout=180s
+kubectl -n mini-netflix logs ecr-pull-test
+kubectl -n mini-netflix get events --field-selector involvedObject.name=ecr-pull-test   # "Successfully pulled image"
+kubectl -n mini-netflix delete pod ecr-pull-test
+```
+
+En un despliegue real: `kubectl describe pod <pod>` muestra `Image: <cuenta>.dkr.ecr.us-east-2.amazonaws.com/...`
+y el evento `Successfully pulled image`. Si falla aparece `ImagePullBackOff` (tag inexistente o rol de nodos sin `AmazonEC2ContainerRegistryReadOnly`).
+
 ## Operación durante las sesiones
 
 ```bash
