@@ -250,6 +250,14 @@ jobs:
         run: |
           IMAGE="$ECR_REGISTRY/mini-netflix/$SERVICIO:$IMAGE_TAG"
 
+          # Tags inmutables: si esta versión ya está publicada (re-ejecución o
+          # reconstrucción manual con el mismo commit), se reutiliza.
+          if aws ecr describe-images --repository-name "mini-netflix/$SERVICIO" \
+               --image-ids imageTag="$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "Ya existe en ECR, se reutiliza: $IMAGE"
+            exit 0
+          fi
+
           docker build -t "$IMAGE" "./$SERVICIO"
           docker push "$IMAGE"
 
