@@ -1,1 +1,22 @@
-k8s_version = "1.33"    # usa la versión que obtuviste en la Fase 0.4
+# Copiar a terraform.tfvars (ignorado por git) y completar.
+# NUNCA pongas aquí access keys: Terraform usa tu perfil del AWS CLI.
+
+region      = "us-east-2"
+azs         = ["us-east-2a", "us-east-2b"]
+k8s_version = "1.37" # aws eks describe-cluster-versions --region us-east-2 --default-only
+
+github_repository    = "PatrikRam/mini-netflix"
+github_oidc_subjects = ["ref:refs/heads/main"]
+
+# Usuarios IAM de los compañeros (deben existir antes del apply)
+team_member_arns = [
+  # "arn:aws:iam::<ACCOUNT_ID>:user/persona2",
+  # "arn:aws:iam::<ACCOUNT_ID>:user/persona3",
+  # "arn:aws:iam::<ACCOUNT_ID>:user/persona4",
+]
+team_cluster_admin = false
+
+single_nat_gateway = true
+
+budget_limit_usd    = 50
+budget_alert_emails = [] # ["tu-correo@ejemplo.com"]
