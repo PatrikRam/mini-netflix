@@ -42,13 +42,21 @@ $TF apply -input=false destroy.tfplan
 rm -f infra/terraform/destroy.tfplan
 
 echo "==> 3/3 Limpieza y verificación"
-for lg in $(aws logs describe-log-groups --log-group-name-prefix "/aws/containerinsights/$CLUSTER" --query 'logGroups[].logGroupName' --output text); do
-  aws logs delete-log-group --log-group-name "$lg" && echo "log group borrado: $lg"
+# Log groups que crea el add-on de CloudWatch (no están en Terraform): Container Insights,
+# Application Signals y eventos por servicio. Se borran para no pagar almacenamiento.
+for prefix in "/aws/containerinsights/$CLUSTER" "/aws/application-signals/data" "/aws/service-events/"; do
+  for lg in $(aws logs describe-log-groups --log-group-name-prefix "$prefix" --query 'logGroups[].logGroupName' --output text); do
+    aws logs delete-log-group --log-group-name "$lg" && echo "log group borrado: $lg"
+  done
 done
 echo "State:        $($TF state list | wc -l) recursos"
 echo "Clústeres:    $(aws eks list-clusters --query 'clusters' --output text)"
 echo "NAT activos:  $(aws ec2 describe-nat-gateways --filter Name=state,Values=available --query 'length(NatGateways)' --output text)"
 echo "ELB clásicos: $(aws elb describe-load-balancers --query 'length(LoadBalancerDescriptions)' --output text)"
 echo "EC2 activas:  $(aws ec2 describe-instances --filters Name=tag:eks:cluster-name,Values=$CLUSTER Name=instance-state-name,Values=running,pending --query 'length(Reservations)' --output text)"
-echo "EIPs libres:  $(aws ec2 describe-addresses --query 'length(Addresses[?AssociationId==null])' --output text)"
+echo "EIPs:         $(aws ec2 describe-addresses --query 'length(Addresses)' --output text)"
+echo "Volúmenes EBS:$(aws ec2 describe-volumes --query 'length(Volumes)' --output text)"
+echo "Repos ECR:    $(aws ecr describe-repositories --query 'length(repositories)' --output text 2>/dev/null || echo 0)"
+echo "Log groups:   $(aws logs describe-log-groups --query 'length(logGroups)' --output text)"
+echo "(todo en 0 / vacío = no queda nada que cobre)"
 echo "Destrucción completada."
