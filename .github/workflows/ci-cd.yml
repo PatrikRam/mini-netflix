@@ -14,6 +14,12 @@ on:
         required: true
         default: false
 
+# OIDC: GitHub emite un JWT y AWS lo canjea por credenciales temporales del rol
+# mini-netflix-github-actions (Terraform, infra/terraform/iam.tf). Sin access keys.
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   test:
     name: Tests - ${{ matrix.servicio }}
@@ -122,7 +128,7 @@ jobs:
           - frontend
 
     env:
-      AWS_REGION: us-east-1
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
 
     steps:
       - name: Descargar repositorio
@@ -131,9 +137,8 @@ jobs:
       - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: gha-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Iniciar sesion en Amazon ECR
@@ -193,7 +198,7 @@ jobs:
       cancel-in-progress: false
 
     env:
-      AWS_REGION: us-east-1
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-2' }}
       NAMESPACE: mini-netflix
 
     steps:
@@ -203,25 +208,16 @@ jobs:
       - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: gha-${{ github.run_id }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Configurar acceso a Kubernetes
-        env:
-          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
         run: |
-          if [ -z "$KUBECONFIG_B64" ]; then
-            echo "ERROR: Falta configurar KUBECONFIG_B64"
-            exit 1
-          fi
-
-          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
-          printf '%s' "$KUBECONFIG_B64" | base64 --decode > "$KUBECONFIG"
-          chmod 600 "$KUBECONFIG"
-
-          echo "KUBECONFIG=$KUBECONFIG" >> "$GITHUB_ENV"
+          # Token EKS temporal (15 min, renovado en cada llamada); sin kubeconfig en secrets
+          aws eks update-kubeconfig \
+            --region "$AWS_REGION" \
+            --name "${{ vars.EKS_CLUSTER_NAME || 'mini-netflix-eks' }}"
 
       - name: Verificar acceso al cluster
         run: |
