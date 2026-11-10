@@ -21,6 +21,11 @@ kubectl get svc -A 2>/dev/null | grep LoadBalancer || true
 read -r -p "Se DESTRUIRÁ toda la infraestructura (imágenes ECR incluidas). ¿Continuar? [y/N] " ans
 [[ "$ans" =~ ^[yY]$ ]] || { echo "Cancelado"; exit 1; }
 
+if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
+  gh variable set INFRA_ACTIVA --repo "${GITHUB_REPO:-PatrikRam/mini-netflix}" --body false \
+    && echo "GitHub Actions: build/deploy automáticos desactivados (INFRA_ACTIVA=false)"
+fi
+
 echo "==> 1/3 Liberando recursos creados por Kubernetes"
 if kubectl get namespace mini-netflix >/dev/null 2>&1; then
   kubectl delete namespace mini-netflix --wait=true --timeout=300s

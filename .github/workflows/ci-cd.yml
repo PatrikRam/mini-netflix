@@ -206,8 +206,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: e2e
 
-    # Solo se habilita mediante una ejecución manual desde main.
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    # Se publica automáticamente al hacer merge (push) a main, o con ejecución manual.
+    # INFRA_ACTIVA (variable del repo) evita fallar cuando la infraestructura está destruida:
+    # la pone en true refresh-aws-secrets.sh y en false destruir.sh.
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      vars.INFRA_ACTIVA == 'true'
 
     strategy:
       fail-fast: false
@@ -279,11 +284,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-push, validate-k8s]
 
-    # No desplegar salvo autorización manual desde main.
+    # Despliegue continuo: cada merge a main se despliega solo.
+    # En ejecución manual, solo si se marca deploy_k8s.
     if: >-
-      github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/main' &&
-      inputs.deploy_k8s == true
+      vars.INFRA_ACTIVA == 'true' &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy_k8s == true))
 
     concurrency:
       group: mini-netflix-deployment
