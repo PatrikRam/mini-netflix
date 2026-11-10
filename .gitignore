@@ -10,3 +10,6 @@ venv/
 *.tfvars
 !*.tfvars.example
 tfplan
+
+# Evidencias generadas por scripts/demo.sh
+evidencias/

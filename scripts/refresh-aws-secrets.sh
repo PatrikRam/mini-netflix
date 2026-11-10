@@ -128,7 +128,8 @@ cmd_github() {
   gh variable set AWS_REGION       --repo "$repo" --body "$AWS_REGION"
   gh variable set EKS_CLUSTER_NAME --repo "$repo" --body "$CLUSTER_NAME"
   gh variable set ECR_REGISTRY     --repo "$repo" --body "$registry"
-  ok "Variables actualizadas en $repo: AWS_ROLE_ARN, AWS_REGION, EKS_CLUSTER_NAME, ECR_REGISTRY"
+  gh variable set INFRA_ACTIVA     --repo "$repo" --body "true"   # habilita build/deploy automáticos
+  ok "Variables actualizadas en $repo: AWS_ROLE_ARN, AWS_REGION, EKS_CLUSTER_NAME, ECR_REGISTRY, INFRA_ACTIVA=true"
   log "Ningún access key fue enviado a GitHub."
 }
 

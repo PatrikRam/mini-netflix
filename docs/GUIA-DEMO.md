@@ -147,15 +147,12 @@ git push -u origin demo/cambio-frontend
 gh pr create --fill --base main
 gh pr checks --watch
 
-# 3. Merge a main
+# 3. Merge a main -> dispara automáticamente build + push a ECR + despliegue en EKS + smoke tests
 gh pr merge --merge --delete-branch
-
-# 4. Disparar build + push a ECR + despliegue en EKS + smoke tests
-gh workflow run "Mini-Netflix CI/CD" --ref main -f deploy_k8s=true
-gh run watch $(gh run list --workflow "Mini-Netflix CI/CD" --limit 1 --json databaseId -q '.[0].databaseId')
+gh run watch $(gh run list --branch main --event push --limit 1 --json databaseId -q '.[0].databaseId')
 ```
 
-(Desde la web: **Actions → Mini-Netflix CI/CD → Run workflow → main → deploy_k8s ✔**.)
+(Todo esto lo automatiza `scripts/demo.sh 4`. Reejecutar a mano: **Actions → Mini-Netflix CI/CD → Run workflow → main → deploy_k8s ✔**.)
 
 Qué mostrar mientras corre:
 
@@ -261,7 +258,7 @@ Pasos manuales equivalentes a `reconstruir.sh`:
 cd infra/terraform && terraform init && terraform plan -out=tfplan && terraform apply tfplan && cd ../..
 scripts/bootstrap-k8s.sh
 scripts/refresh-aws-secrets.sh github          # los ARN no cambian, pero no hace daño
-# Imágenes: o bien Actions -> Run workflow (deploy_k8s = false), o build local:
+# Imágenes: o bien Actions -> Run workflow, o build local:
 export IMAGE_TAG=manual-$(git rev-parse --short HEAD)
 REG=$(terraform -chdir=infra/terraform output -raw ecr_registry)
 aws ecr get-login-password | docker login -u AWS --password-stdin $REG
