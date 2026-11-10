@@ -50,9 +50,11 @@ resource "aws_iam_role" "github_actions" {
         }
         # Solo este repositorio y solo las ramas/entornos permitidos
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = [
-            for s in var.github_oidc_subjects : "repo:${var.github_repository}:${s}"
-          ]
+          "token.actions.githubusercontent.com:sub" = flatten([
+            for p in var.github_oidc_repo_prefixes : [
+              for s in var.github_oidc_subjects : "repo:${p}:${s}"
+            ]
+          ])
         }
       }
     }]

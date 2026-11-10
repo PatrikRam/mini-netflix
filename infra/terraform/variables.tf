@@ -94,6 +94,16 @@ variable "github_repository" {
   default     = "PatrikRam/mini-netflix"
 }
 
+variable "github_oidc_repo_prefixes" {
+  description = <<-EOT
+    Formas exactas en que GitHub identifica al repositorio en el claim 'sub'.
+    Con "immutable subject" activo, GitHub usa owner@<id>/repo@<id>. Consultar con:
+    gh api repos/<owner>/<repo>/actions/oidc/customization/sub
+  EOT
+  type        = list(string)
+  default     = ["PatrikRam/mini-netflix", "PatrikRam@104391546/mini-netflix@1396175104"]
+}
+
 variable "github_oidc_subjects" {
   description = <<-EOT
     Sufijos del claim 'sub' permitidos (después de repo:<owner>/<repo>:).
