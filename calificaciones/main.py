@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -33,7 +32,7 @@ async def manejar_validacion(request: Request, exc: RequestValidationError):
 class NuevaCalificacion(BaseModel):
     pelicula_id: int
     puntaje: int = Field(ge=1, le=5)
-    reseña: Optional[str] = None
+    reseña: str | None = None
 
 
 def verificar_pelicula(pelicula_id: int):

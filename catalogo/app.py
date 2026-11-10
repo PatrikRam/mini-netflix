@@ -20,4 +20,5 @@ def listar():
     return jsonify(PELICULAS)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    # Dentro del contenedor debe escuchar en todas las interfaces
+    app.run(host="0.0.0.0", port=5000)  # nosec B104

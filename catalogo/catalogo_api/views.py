@@ -1,7 +1,12 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .services import PeliculaService, ServicioNoDisponibleError, PeliculaNoEncontradaError
+
 from .serializers import PeliculaSerializer
+from .services import (
+    PeliculaNoEncontradaError,
+    PeliculaService,
+    ServicioNoDisponibleError,
+)
 
 service = PeliculaService()
 

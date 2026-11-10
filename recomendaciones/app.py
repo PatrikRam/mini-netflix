@@ -1,9 +1,8 @@
-import os
 import math
+import os
+
 import requests
-
 from fastapi import FastAPI, HTTPException
-
 
 app = FastAPI(
     title="Mini Netflix - Recomendaciones",
