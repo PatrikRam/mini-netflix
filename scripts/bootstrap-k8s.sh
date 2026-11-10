@@ -24,7 +24,12 @@ echo "==> 3/4 Namespace $NAMESPACE"
 kubectl apply -f "$ROOT_DIR/k8s/eks/namespace.yaml"
 
 echo "==> 4/4 metrics-server $METRICS_SERVER_VERSION (requerido por el HPA)"
-kubectl apply -f "https://github.com/kubernetes-sigs/metrics-server/releases/download/${METRICS_SERVER_VERSION}/components.yaml"
+# Se descarga de GitHub: se reintenta por si hay un fallo de red pasajero
+for intento in 1 2 3 4 5; do
+  kubectl apply -f "https://github.com/kubernetes-sigs/metrics-server/releases/download/${METRICS_SERVER_VERSION}/components.yaml" && break
+  [ "$intento" -eq 5 ] && { echo "ERROR: no se pudo instalar metrics-server"; exit 1; }
+  echo "Reintentando metrics-server ($intento/5)..."; sleep 10
+done
 kubectl -n kube-system rollout status deployment/metrics-server --timeout=180s
 
 echo "Esperando a que la Metrics API responda..."

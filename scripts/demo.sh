@@ -58,6 +58,26 @@ fe_url() { echo "http://$(kubectl -n "$NS" get svc frontend -o jsonpath='{.statu
 
 for t in aws kubectl curl; do need "$t"; done
 
+# Antes de las etapas que usan la aplicación: comprobar que está desplegada y accesible
+verificar_app() {
+  local faltan=() lb
+  kubectl get nodes >/dev/null 2>&1 || {
+    echo "${R}✖ kubectl no conecta con el clúster. Ejecuta: scripts/refresh-aws-secrets.sh kubeconfig${N}"; exit 1; }
+  for d in catalogo calificaciones rankings recomendaciones frontend; do
+    kubectl -n "$NS" get deploy "$d" >/dev/null 2>&1 || faltan+=("$d")
+  done
+  if [ ${#faltan[@]} -gt 0 ]; then
+    echo "${R}✖ La aplicación no está desplegada (faltan: ${faltan[*]}).${N}"
+    echo "  Si acabas de reconstruir y falló a medias:  DESDE=4 scripts/reconstruir.sh"
+    echo "  Si ya hay imágenes en ECR:                  IMAGE_TAG=<tag> scripts/deploy-inicial.sh"
+    exit 1
+  fi
+  lb=$(kubectl -n "$NS" get svc frontend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+  [ -n "$lb" ] || { echo "${R}✖ El LoadBalancer del frontend aún no tiene URL. Espera 1-2 min y repite.${N}"; exit 1; }
+  for _ in $(seq 1 18); do curl -sf -o /dev/null --max-time 5 "http://$lb/" && return 0; sleep 10; done
+  echo "${R}✖ http://$lb no responde todavía (el DNS de un ELB nuevo tarda hasta 3 min).${N}"; exit 1
+}
+
 # ===================================================================== 1
 etapa1() {
   titulo "1/6 · INFRAESTRUCTURA COMO CÓDIGO (Terraform → VPC, EKS, EC2, ECR)   [PDF 4.4]"
@@ -331,8 +351,11 @@ for t,v in rows:
 }
 
 # ===================================================================== 7 / 8
-etapa_destruir()    { titulo "7 · DESTRUCCIÓN LIMPIA DE LA INFRAESTRUCTURA   [PDF 4.4, 5 · demo 9]"; scripts/destruir.sh; }
-etapa_reconstruir() { titulo "8 · RECONSTRUCCIÓN COMPLETA DESDE CÓDIGO   [PDF 4.4 · demo 9]"; scripts/reconstruir.sh; }
+etapa_destruir()    { titulo "7 · DESTRUCCIÓN LIMPIA DE LA INFRAESTRUCTURA   [PDF 4.4, 5 · demo 9]"; scripts/destruir.sh || exit 1; }
+etapa_reconstruir() {
+  titulo "8 · RECONSTRUCCIÓN COMPLETA DESDE CÓDIGO   [PDF 4.4 · demo 9]"
+  scripts/reconstruir.sh || { echo "${R}✖ La reconstrucción no terminó: corrige y reanuda con DESDE=<paso> scripts/reconstruir.sh${N}"; exit 1; }
+}
 
 # ===================================================================== main
 [ $# -eq 0 ] && set -- 1 2 3 4 5 6
@@ -340,6 +363,9 @@ titulo "MINI-NETFLIX · Proyecto Integrador Cloud Computing · AWS $AWS_REGION �
 nota "Identidad AWS: $(aws sts get-caller-identity --query Arn --output text 2>/dev/null | mask)"
 nota "Contexto kubectl: $(kubectl config current-context 2>/dev/null)"
 nota "Evidencias en: $EVID/"
+for e in "$@"; do
+  case "$e" in 2|3|4|5|6) verificar_app; break ;; esac
+done
 for e in "$@"; do
   case "$e" in
     1) etapa1 ;; 2) etapa2 ;; 3) etapa3 ;; 4) etapa4 ;; 5) etapa5 ;; 6) etapa6 ;;
